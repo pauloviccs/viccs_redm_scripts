@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VICCS Camera</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Overlay principal do modo foto -->
+    <div id="camera-overlay" class="hidden">
+        <!-- Vinheta (bordas escuras) -->
+        <div class="vignette"></div>
+
+        <!-- Crosshair central -->
+        <div class="crosshair">
+            <div class="crosshair-h"></div>
+            <div class="crosshair-v"></div>
+        </div>
+
+        <!-- Linhas de grid (regra dos terços) -->
+        <div class="grid">
+            <div class="grid-line grid-h1"></div>
+            <div class="grid-line grid-h2"></div>
+            <div class="grid-line grid-v1"></div>
+            <div class="grid-line grid-v2"></div>
+        </div>
+
+        <!-- Barra de status no topo esquerdo -->
+        <div class="status-bar" id="status-bar">
+            <div class="status-title" id="photo-title">MODO FOTO</div>
+            <div class="status-info" id="status-info">
+                <span id="status-filter">Filtro: Nenhum</span>
+                <span class="status-divider">│</span>
+                <span id="status-dof">Foco: ON</span>
+                <span class="status-divider">│</span>
+                <span id="status-zoom">Zoom: 0%</span>
+            </div>
+        </div>
+
+        <!-- Indicador de filtro (canto superior direito, aparece ao trocar) -->
+        <div class="filter-indicator" id="filter-indicator">
+            <span class="filter-icon">◉</span>
+            <span class="filter-name" id="filter-name">Nenhum</span>
+        </div>
+
+        <!-- Controles no rodapé -->
+        <div class="controls-bar" id="controls-bar">
+            <span class="control-item">ENTER: Foto</span>
+            <span class="control-divider">│</span>
+            <span class="control-item">BACKSPACE: Sair</span>
+            <span class="control-divider">│</span>
+            <span class="control-item">WASD: Mover</span>
+            <span class="control-divider">│</span>
+            <span class="control-item">Space/Q: ↑↓</span>
+            <span class="control-divider">│</span>
+            <span class="control-item">F: Filtro</span>
+            <span class="control-divider">│</span>
+            <span class="control-item">G: Foco</span>
+            <span class="control-divider">│</span>
+            <span class="control-item">H: HUD</span>
+            <span class="control-divider">│</span>
+            <span class="control-item">Scroll: Zoom</span>
+            <span class="control-divider">│</span>
+            <span class="control-item">X: Recolher</span>
+        </div>
+
+        <!-- Watermark -->
+        <div class="watermark">VICCS PHOTO</div>
+    </div>
+
+    <!-- Flash branco ao tirar foto -->
+    <div id="flash-overlay" class="flash hidden"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
