@@ -15,6 +15,7 @@ PhotoMode.rotX = 0.0        -- Pitch
 PhotoMode.rotZ = 0.0        -- Yaw
 PhotoMode.camPos = nil       -- Posição atual da câmera (free cam)
 PhotoMode.anchorPos = nil    -- Posição do prop no chão (ponto de ancoragem)
+PhotoMode.capturing = false
 
 -- ============================================================
 -- Hashes nativos para DOF (RDR3/RedM)
@@ -33,6 +34,7 @@ function PhotoMode:Start(propCoords, propHeading)
     self.filterIndex = 1
     self.dofEnabled = Config.DOFEnabled
     self.hudHidden = false
+    self.capturing = false
 
     -- Salvar ponto de ancoragem (posição do prop no chão)
     self.anchorPos = vector3(propCoords.x, propCoords.y, propCoords.z)
@@ -76,6 +78,11 @@ end
 function PhotoMode:Update()
     if not self.active or not self.cam then return end
 
+    -- Ocultar radar e HUD do jogo a cada frame se hudHidden for true
+    if self.hudHidden then
+        HideHudAndRadarThisFrame()
+    end
+
     -- ========================================================
     -- DESABILITAR CONTROLES SELETIVAMENTE
     -- ========================================================
@@ -114,6 +121,20 @@ function PhotoMode:Update()
     -- Também desabilitar interação contextual (prevenir ações do E)
     DisableControlAction(0, 0xB73BCA77, true) -- INPUT_CONTEXT
     DisableControlAction(0, 0xFF12C566, true) -- INPUT_LOOT
+
+    -- Desabilitar Arrow Up / Arrow Down (para free cam vertical)
+    DisableControlAction(0, Config.Keys.FreeCamUpArrow, true)   -- Arrow Up
+    DisableControlAction(0, Config.Keys.FreeCamDownArrow, true) -- Arrow Down
+
+    -- Se estiver no meio de um processo de captura de foto, mantemos o render ativo e ignoramos outros inputs
+    if self.capturing then
+        SetCamCoord(self.cam, self.camPos.x, self.camPos.y, self.camPos.z)
+        SetCamRot(self.cam, self.rotX, 0.0, self.rotZ, 2)
+        if self.dofEnabled then
+            self:ApplyDOFPerFrame()
+        end
+        return
+    end
 
     -- ========================================
     -- ROTAÇÃO DA CÂMERA (Mouse)
@@ -181,22 +202,21 @@ function PhotoMode:Update()
     end
 
     -- ========================================
-    -- Hide HUD (H)
+    -- TÓGULO HUD (ENTER ou Z)
     -- ========================================
-    if IsDisabledControlJustReleased(0, Config.Keys.PhotoHideUI) then
+    if IsDisabledControlJustReleased(0, Config.Keys.PhotoHideUI) or IsDisabledControlJustReleased(0, Config.Keys.PhotoCapture) then
         self.hudHidden = not self.hudHidden
         if self.hudHidden then
             SendNUIMessage({ action = "hide" })
+            self:ToggleExternalHUDs(false)
+            DisplayRadar(false)
+            DisplayHud(false)
         else
             SendNUIMessage({ action = "show", controls = Config.Locale.ControlsHelp })
+            self:ToggleExternalHUDs(true)
+            DisplayRadar(true)
+            DisplayHud(true)
         end
-    end
-
-    -- ========================================
-    -- SCREENSHOT (ENTER)
-    -- ========================================
-    if IsDisabledControlJustReleased(0, Config.Keys.PhotoCapture) then
-        self:TakeScreenshot()
     end
 
     -- ========================================
@@ -247,12 +267,24 @@ function PhotoMode:UpdateFreeCam()
 
     -- Subir/descer
     local verticalMove = 0.0
-    -- Space = subir
+    -- Space = subir (INPUT_JUMP)
     if IsDisabledControlPressed(0, Config.Keys.FreeCamUp) then
         verticalMove = speed
     end
-    -- Q = descer
+    -- E = subir (INPUT_ENTER) — alternativa
+    if IsDisabledControlPressed(0, Config.Keys.FreeCamUpAlt) then
+        verticalMove = speed
+    end
+    -- Arrow Up = subir (INPUT_PHONE_UP / INPUT_FRONTEND_UP)
+    if IsDisabledControlPressed(0, Config.Keys.FreeCamUpArrow) then
+        verticalMove = speed
+    end
+    -- Q = descer (INPUT_COVER)
     if IsDisabledControlPressed(0, Config.Keys.FreeCamDown) then
+        verticalMove = verticalMove - speed
+    end
+    -- Arrow Down = descer (INPUT_PHONE_DOWN / INPUT_FRONTEND_DOWN)
+    if IsDisabledControlPressed(0, Config.Keys.FreeCamDownArrow) then
         verticalMove = verticalMove - speed
     end
 
@@ -298,58 +330,20 @@ function PhotoMode:UpdateNUIStatus()
 end
 
 -- ============================================================
--- Capturar screenshot usando screenshot-basic
+-- Ocultar/Exibir HUDs de outros scripts do servidor
 -- ============================================================
-function PhotoMode:TakeScreenshot()
-    -- Esconde a NUI para o screenshot capturar a imagem limpa
-    SendNUIMessage({ action = "hide" })
-    Wait(300) -- Esperar a NUI desaparecer completamente
-
-    if Config.Webhook and Config.Webhook ~= "" then
-        -- Nota: Discord espera o campo "files[]" no multipart upload
-        exports['screenshot-basic']:requestScreenshotUpload(
-            Config.Webhook,
-            "files[]",
-            function(data)
-                -- Dispara o efeito de flash e som
-                SendNUIMessage({ action = "triggerFlash" })
-
-                Wait(500)
-                if not PhotoMode.hudHidden then
-                    SendNUIMessage({ action = "show", controls = Config.Locale.ControlsHelp })
-                end
-
-                -- Tenta decodificar a resposta do Discord
-                local success, resp = pcall(json.decode, data)
-                if success and resp and resp.attachments and resp.attachments[1] then
-                    local photoUrl = resp.attachments[1].proxy_url or resp.attachments[1].url
-                    TriggerEvent('chat:addMessage', {
-                        color = { 255, 200, 100 },
-                        args = { "Câmera", "Foto enviada com sucesso!" }
-                    })
-                    print("[viccs_camera] Foto enviada: " .. tostring(photoUrl))
-                else
-                    print("[viccs_camera] Discord response: " .. tostring(data))
-                    TriggerEvent('chat:addMessage', {
-                        color = { 255, 200, 100 },
-                        args = { "Câmera", "Foto capturada! Verifique o canal do Discord." }
-                    })
-                end
+function PhotoMode:ToggleExternalHUDs(visible)
+    if Config.HideExternalHudEvents then
+        for _, hudData in ipairs(Config.HideExternalHudEvents) do
+            local param = visible
+            if hudData.paramType == "boolean_inverse" then
+                param = not visible
             end
-        )
-    else
-        SendNUIMessage({ action = "triggerFlash" })
-        Wait(500)
-        if not PhotoMode.hudHidden then
-            SendNUIMessage({ action = "show", controls = Config.Locale.ControlsHelp })
+            TriggerEvent(hudData.event, param)
         end
-
-        TriggerEvent('chat:addMessage', {
-            color = { 255, 100, 100 },
-            args = { "Câmera", "Configure o Webhook do Discord no config.lua para salvar fotos." }
-        })
     end
 end
+
 
 -- ============================================================
 -- Ciclar filtros
@@ -410,6 +404,11 @@ end
 function PhotoMode:Stop()
     if not self.active then return end
     self.active = false
+
+    -- Restaurar radar, HUD nativa e HUDs externas do servidor
+    DisplayRadar(true)
+    DisplayHud(true)
+    self:ToggleExternalHUDs(true)
 
     -- Remove filtros ativos
     local currentFilter = Config.Filters[self.filterIndex]

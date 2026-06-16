@@ -90,7 +90,7 @@ Config.Keys = {
     PhotoCapture   = 0xC7B5340A,  -- ENTER
     PhotoFilter    = 0xB2F377E8,  -- F (INPUT_VEH_EXIT)
     PhotoDOF       = 0x760A9C6F,  -- G (INPUT_INTERACTION_MENU)
-    PhotoHideUI    = 0x24978A28,  -- H (INPUT_WHISTLE)
+    PhotoHideUI    = 0x26E9DC00,  -- Z (0x26E9DC00)
     PhotoPickup    = 0x8CC9CD42,  -- X (INPUT_GAME_MENU_TAB_RIGHT_SECONDARY)
     PhotoZoomIn    = 0xCC1075A7,  -- Scroll Up (INPUT_PREV_WEAPON)
     PhotoZoomOut   = 0xFD0F0C2C,  -- Scroll Down (INPUT_NEXT_WEAPON)
@@ -100,7 +100,19 @@ Config.Keys = {
     FreeCamStrafe  = 0xD6D7A177,  -- A/D (INPUT_MOVE_LR — eixo horizontal)
     FreeCamSprint  = 0x8FFC75D6,  -- Shift (INPUT_SPRINT)
     FreeCamUp      = 0xD9D2CE13,  -- Space (INPUT_JUMP) — subir câmera
+    FreeCamUpAlt   = 0xCEFD9220,  -- E (INPUT_ENTER) — subir câmera (alternativa)
+    FreeCamUpArrow = 0x6319DB71,  -- Arrow Up (INPUT_CELLPHONE_UP) — subir câmera
     FreeCamDown    = 0xDE794E3E,  -- Q (INPUT_COVER) — descer câmera
+    FreeCamDownArrow = 0x05CA7C52, -- Arrow Down (INPUT_CELLPHONE_DOWN) — descer câmera
+}
+
+-- ============================================================
+-- INTEGRAÇÃO COM OUTRAS HUDS (Ocultar HUDs externas no modo limpo)
+-- ============================================================
+Config.HideExternalHudEvents = {
+    { event = "vorp:showHud", paramType = "boolean_inverse" },        -- se HUD da câmera está visível, HUD externa deve aparecer (true). Se câmera oculta HUD, HUD externa some (false).
+    { event = "vorp_hud:toggleUi", paramType = "boolean_inverse" },   -- padrão do vorp_hud
+    { event = "hud:toggleHud", paramType = "boolean_inverse" },       -- outros scripts de HUD comuns
 }
 
 -- ============================================================
@@ -120,5 +132,5 @@ Config.Locale = {
     FilterLabel        = "Filtro",
     DOFLabel           = "Foco",
     ZoomLabel          = "Zoom",
-    ControlsHelp       = "ENTER: Foto | BACKSPACE: Sair | F: Filtro | G: Foco | H: HUD | WASD: Mover | Scroll: Zoom | X: Recolher",
+    ControlsHelp       = "ENTER: Tirar Foto | BACKSPACE: Sair | F: Filtro | G: Foco | WASD: Mover | ↑↓: Subir/Descer | Scroll: Zoom | X: Recolher",
 }

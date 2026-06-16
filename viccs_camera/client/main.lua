@@ -12,6 +12,9 @@ local promptGroup = nil
 local promptActivate = nil
 local promptPickup = nil
 
+-- Referência global para photomode.lua poder esconder/mostrar o prop
+CameraEntityRef = nil
+
 -- ============================================================
 -- Evento: Servidor pede para iniciar placement
 -- ============================================================
@@ -50,6 +53,9 @@ RegisterNetEvent("viccs_camera:client:placementConfirmed", function(pos, heading
 
     cameraCoords = GetEntityCoords(cameraEntity)
     cameraHeading = heading
+
+    -- Expor referência global para photomode.lua
+    CameraEntityRef = cameraEntity
 
     -- Remove o item do inventário (câmera está no chão agora)
     TriggerServerEvent("viccs_camera:server:removeCameraItem")
@@ -99,6 +105,11 @@ function ProximityLoop()
         -- Resetar flag quando sai do modo foto
         if isPhotoModeActive and not PhotoMode.active then
             isPhotoModeActive = false
+            -- Restaurar visibilidade do prop ao sair do modo foto
+            if cameraEntity and DoesEntityExist(cameraEntity) then
+                SetEntityVisible(cameraEntity, true)
+                SetEntityCollision(cameraEntity, true, true)
+            end
         end
     end
 
@@ -119,6 +130,14 @@ function ActivatePhotoMode()
     end
 
     isPhotoModeActive = true
+
+    -- Esconder o prop da câmera durante o modo foto
+    -- (o jogador não deve ver o tripé na cena)
+    if cameraEntity and DoesEntityExist(cameraEntity) then
+        SetEntityVisible(cameraEntity, false)
+        SetEntityCollision(cameraEntity, false, false)
+    end
+
     PhotoMode:Start(cameraCoords, cameraHeading)
 end
 
@@ -155,9 +174,12 @@ function PickupCamera()
     isPhotoModeActive = false
 
     if cameraEntity and DoesEntityExist(cameraEntity) then
+        -- Garantir que o prop está visível antes de deletar
+        SetEntityVisible(cameraEntity, true)
         DeleteEntity(cameraEntity)
     end
     cameraEntity = nil
+    CameraEntityRef = nil
     cameraCoords = nil
     cameraHeading = 0.0
 

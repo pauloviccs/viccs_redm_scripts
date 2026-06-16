@@ -59,4 +59,3 @@ RegisterCommand(Config.CommandName, function(source, args, rawCommand)
 
     TriggerClientEvent("viccs_camera:client:startPlacement", _source)
 end, false) -- false = todos podem usar
-
